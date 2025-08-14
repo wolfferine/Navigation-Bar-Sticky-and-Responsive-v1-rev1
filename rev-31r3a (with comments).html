@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="author"      content="Charles Wolff">
+  <meta name="description" content="Sticky Responsive Menubar, Hamburger with Delayed Icon Swap and Close">
+  <meta name="keywords"    content="menubar, navigation, sticky, cssonly, codepen, x3mgroup, dreamclouds, wolfferine">
+  <meta name="viewport"    content="width=device-width, initial-scale=1.0">
+  <title>Navigation Bar (Sticky and Responsive) v1.0 rev1</title>
+
+<!-- ===========================
+     CSS STYLES
+     =========================== -->
+<style>
+  /* Reset margin and set global font */
+  body {
+    margin: 0;
+    font-family: roboto, sans-serif;
+    padding-top: 60px; /* Creates space so fixed navbar doesn’t overlap content */
+  }
+
+  /* Main navbar container (fixed at top) */
+  .navbar {
+    background-color: #333;
+    color: white;
+    display: flex;               /* Horizontal layout */
+    align-items: center;         /* Vertically center items */
+    padding: 0 20px;
+    height: 60px;
+    position: fixed;             /* Sticks to top of page */
+    top: 0; left: 0; right: 0;
+    z-index: 1000;                /* Stays above other elements */
+  }
+
+  /* Site logo text */
+  .logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  /* Horizontal menu on desktop */
+  .menu {
+    list-style: none;             /* Remove bullet points */
+    display: flex;
+    margin-left: auto;            /* Push menu to right */
+  }
+
+  /* Menu links styling */
+  .menu li a {
+    color: white;
+    text-decoration: none;
+    padding: 0 15px;
+    display: block;
+    line-height: 60px;            /* Match navbar height */
+  }
+
+  /* Hover effect for menu links */
+  .menu li a:hover {
+    color: yellow;
+    background-color: #555;
+  }
+
+  /* Hamburger and close icons (hidden by default on desktop) */
+  .hamburger, .close {
+    font-size: 1.8rem;
+    cursor: pointer;
+    margin-left: auto;
+    color: white;
+    background: none;
+    border: none;
+    display: none; /* Will be shown conditionally via media queries or JS */
+  }
+
+  /* ======= MOBILE STYLES ======= */
+  @media (max-width: 768px) {
+    /* Show hamburger menu icon on small screens */
+    .hamburger {
+      display: block;
+    }
+
+    /* Close button position (hidden initially) */
+    .close {
+      display: none;
+      position: absolute;
+      right: 20px;
+      top: 15px;
+    }
+
+    /* Mobile menu layout (hidden by default) */
+    .menu {
+      position: fixed;
+      top: 60px;                  /* Below navbar */
+      left: 0;
+      right: 0;
+      background-color: #333;
+      flex-direction: column;     /* Stack items vertically */
+      align-items: center;
+      max-height: 0;              /* Collapsed */
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, opacity 0.4s ease;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Menu visible state */
+    .menu.open {
+      max-height: 100vh;
+      opacity: 1;
+    }
+
+    /* Menu items initial state (hidden for stagger animation) */
+    .menu li {
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      width: 100%;
+      list-style: none;
+    }
+
+    /* Menu items visible state */
+    .menu li.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Mobile menu link style */
+    .menu li a {
+      line-height: 40px;
+      padding: 10px 20px;
+      text-align: center;
+      width: 100%;
+      display: block;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===========================
+     NAVIGATION BAR HTML
+     =========================== -->
+<nav class="navbar">
+  <div class="logo">MySite</div>
+  <!-- Hamburger icon (mobile trigger) -->
+  <button class="hamburger" id="hamburgerBtn" aria-label="Open menu">☰</button>
+  <!-- Close icon (mobile close trigger) -->
+  <button class="close" id="closeBtn" aria-label="Close menu">✖</button>
+  
+  <!-- Menu links -->
+  <ul class="menu" id="menu">
+    <li><a href="#home" tabindex="0">Home</a></li>
+    <li><a href="#about" tabindex="0">About</a></li>
+    <li><a href="#services" tabindex="0">Services</a></li>
+    <li><a href="#contact" tabindex="0">Contact</a></li>
+    <li><a href="#blog" tabindex="0">Blog</a></li>
+    <li><a href="#faq" tabindex="0">FAQ</a></li>
+  </ul>
+</nav>
+
+<!-- ===========================
+     DEMO PAGE CONTENT
+     =========================== -->
+<section id="home" style="height:100vh; background:#eee; padding:20px;">Home content</section>
+<section id="about" style="height:100vh; background:#ddd; padding:20px;">About content</section>
+<section id="services" style="height:100vh; background:#ccc; padding:20px;">Services content</section>
+<section id="contact" style="height:100vh; background:#bbb; padding:20px;">Contact content</section>
+<section id="blog" style="height:100vh; background:#aaa; padding:20px;">Blog content</section>
+<section id="faq" style="height:100vh; background:#999; padding:20px;">FAQ content</section>
+
+<!-- ===========================
+     JAVASCRIPT INTERACTIONS
+     =========================== -->
+<script>
+  // Get key DOM elements
+  const hamburgerBtn = document.getElementById('hamburgerBtn');
+  const closeBtn = document.getElementById('closeBtn');
+  const menu = document.getElementById('menu');
+  const menuItems = Array.from(menu.querySelectorAll('li'));
+
+  // Animation settings
+  const staggerDelay = 100; // ms between showing each menu item
+  const closeDelay = staggerDelay * menuItems.length + 300; // time to wait before fully closing menu
+
+  // Open menu with staggered animation
+  function openMenu() {
+    menu.classList.add('open');      // Expand menu container
+    hamburgerBtn.style.display = 'none'; // Hide hamburger icon
+    closeBtn.style.display = 'none';     // Hide close button until animation ends
+
+    // Show each menu item one by one
+    menuItems.forEach((li, i) => {
+      setTimeout(() => li.classList.add('show'), i * staggerDelay);
+    });
+
+    // After items are shown, display close button
+    setTimeout(() => {
+      closeBtn.style.display = 'block';
+    }, staggerDelay * menuItems.length + 100);
+  }
+
+  // Close menu with reverse stagger animation
+  function closeMenu() {
+    closeBtn.style.display = 'none'; // Hide close icon immediately
+
+    // Hide items one by one (reverse order)
+    menuItems.slice().reverse().forEach((li, i) => {
+      setTimeout(() => li.classList.remove('show'), i * staggerDelay);
+    });
+
+    // After animation finishes, collapse menu
+    setTimeout(() => {
+      menu.classList.remove('open');
+      if (window.innerWidth <= 768) {
+        hamburgerBtn.style.display = 'block'; // Show hamburger again on mobile
+      }
+    }, closeDelay);
+  }
+
+  // Event: open menu on hamburger click
+  hamburgerBtn.addEventListener('click', e => {
+    e.preventDefault();
+    openMenu();
+  });
+
+  // Event: close menu on close button click
+  closeBtn.addEventListener('click', e => {
+    e.preventDefault();
+    closeMenu();
+  });
+
+  // Event: close menu when clicking any menu link
+  menu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      closeMenu();
+    });
+  });
+
+  // Event: adjust menu behavior when resizing window
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+      // Reset to desktop layout
+      hamburgerBtn.style.display = 'none';
+      closeBtn.style.display = 'none';
+      menu.classList.remove('open');
+      menuItems.forEach(li => li.classList.remove('show'));
+    }
+  });
+</script>
+
+</body>
+</html>
